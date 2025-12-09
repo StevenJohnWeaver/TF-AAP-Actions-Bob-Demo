@@ -1,0 +1,352 @@
+---
+# Deploy application to OpenShift
+# This playbook is triggered after infrastructure configuration is complete
+
+- name: Deploy Application to OpenShift
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  
+  vars:
+    openshift_api_url: "https://api.crc.testing:6443"
+    
+  tasks:
+    - name: Display deployment context
+      debug:
+        msg:
+          - "========================================="
+          - "OpenShift Application Deployment"
+          - "========================================="
+          - "Terraform Run ID: {{ terraform_run_id }}"
+          - "Workspace: {{ terraform_workspace }}"
+          - "VPC ID: {{ vpc_id }}"
+          - "AWS Region: {{ aws_region }}"
+          - "Backend Instances: {{ instances | length }}"
+          - "Namespace: {{ openshift_namespace }}"
+          - "Application: {{ application_name }}"
+          - "Replicas: {{ replicas }}"
+          - "========================================="
+    
+    - name: Authenticate to HCP Vault
+      uri:
+        url: "{{ vault_address }}/v1/auth/approle/login"
+        method: POST
+        body_format: json
+        headers:
+          X-Vault-Namespace: "{{ vault_namespace }}"
+        body:
+          role_id: "{{ lookup('env', 'VAULT_ROLE_ID') }}"
+          secret_id: "{{ lookup('env', 'VAULT_SECRET_ID') }}"
+        status_code: 200
+      register: vault_login
+      no_log: true
+    
+    - name: Set Vault token
+      set_fact:
+        vault_token: "{{ vault_login.json.auth.client_token }}"
+      no_log: true
+    
+    - name: Fetch OpenShift credentials from HCP Vault
+      uri:
+        url: "{{ vault_address }}/v1/secret/data/openshift/credentials"
+        method: GET
+        headers:
+          X-Vault-Token: "{{ vault_token }}"
+          X-Vault-Namespace: "{{ vault_namespace }}"
+        status_code: 200
+      register: ocp_creds
+      no_log: true
+    
+    - name: Login to OpenShift
+      kubernetes.core.k8s_auth:
+        host: "{{ openshift_api_url }}"
+        username: "{{ ocp_creds.json.data.data.admin_user }}"
+        password: "{{ ocp_creds.json.data.data.admin_password }}"
+        validate_certs: no
+      register: k8s_auth
+    
+    - name: Create namespace
+      kubernetes.core.k8s:
+        api_key: "{{ k8s_auth.k8s_auth.api_key }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ openshift_namespace }}"
+            labels:
+              terraform-run-id: "{{ terraform_run_id }}"
+              terraform-workspace: "{{ terraform_workspace }}"
+              managed-by: "terraform-aap"
+              vpc-id: "{{ vpc_id }}"
+              aws-region: "{{ aws_region }}"
+    
+    - name: Fetch application secrets from HCP Vault
+      uri:
+        url: "{{ vault_address }}/v1/secret/data/applications/demo-app"
+        method: GET
+        headers:
+          X-Vault-Token: "{{ vault_token }}"
+          X-Vault-Namespace: "{{ vault_namespace }}"
+        status_code: 200
+      register: app_secrets
+      no_log: true
+    
+    - name: Create backend IPs list
+      set_fact:
+        backend_ips: "{{ instances | map(attribute='private_ip') | join(',') }}"
+        backend_ids: "{{ instances | map(attribute='id') | join(',') }}"
+    
+    - name: Create OpenShift secret with application credentials
+      kubernetes.core.k8s:
+        api_key: "{{ k8s_auth.k8s_auth.api_key }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: app-secrets
+            namespace: "{{ openshift_namespace }}"
+            labels:
+              terraform-run-id: "{{ terraform_run_id }}"
+              app: "{{ application_name }}"
+          type: Opaque
+          stringData:
+            database-url: "{{ app_secrets.json.data.data.database_url }}"
+            api-key: "{{ app_secrets.json.data.data.api_key }}"
+            backend-ips: "{{ backend_ips }}"
+    
+    - name: Create ConfigMap with infrastructure details
+      kubernetes.core.k8s:
+        api_key: "{{ k8s_auth.k8s_auth.api_key }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: infrastructure-config
+            namespace: "{{ openshift_namespace }}"
+            labels:
+              terraform-run-id: "{{ terraform_run_id }}"
+              app: "{{ application_name }}"
+          data:
+            vpc_id: "{{ vpc_id }}"
+            vpc_cidr: "{{ vpc_cidr | default('N/A') }}"
+            aws_region: "{{ aws_region }}"
+            environment: "{{ environment | default('demo') }}"
+            terraform_run_id: "{{ terraform_run_id }}"
+            terraform_workspace: "{{ terraform_workspace }}"
+            backend_instance_ids: "{{ backend_ids }}"
+            backend_instance_ips: "{{ backend_ips }}"
+            backend_instance_count: "{{ instances | length }}"
+    
+    - name: Deploy application
+      kubernetes.core.k8s:
+        api_key: "{{ k8s_auth.k8s_auth.api_key }}"
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ application_name }}"
+            namespace: "{{ openshift_namespace }}"
+            labels:
+              app: "{{ application_name }}"
+              terraform-run-id: "{{ terraform_run_id }}"
+              managed-by: "terraform-aap"
+          spec:
+            replicas: "{{ replicas | int }}"
+            selector:
+              matchLabels:
+                app: "{{ application_name }}"
+            template:
+              metadata:
+                labels:
+                  app: "{{ application_name }}"
+                  terraform-run-id: "{{ terraform_run_id }}"
+                  version: "v1"
+              spec:
+                containers:
+                - name: app
+                  image: quay.io/redhat-demo/sample-app:latest
+                  imagePullPolicy: Always
+                  ports:
+                  - containerPort: 8080
+                    name: http
+                    protocol: TCP
+                  env:
+                  - name: DATABASE_URL
+                    valueFrom:
+                      secretKeyRef:
+                        name: app-secrets
+                        key: database-url
+                  - name: API_KEY
+                    valueFrom:
+                      secretKeyRef:
+                        name: app-secrets
+                        key: api-key
+                  - name: BACKEND_IPS
+                    valueFrom:
+                      secretKeyRef:
+                        name: app-secrets
+                        key: backend-ips
+                  - name: VPC_ID
+                    valueFrom:
+                      configMapKeyRef:
+                        name: infrastructure-config
+                        key: vpc_id
+                  - name: AWS_REGION
+                    valueFrom:
+                      configMapKeyRef:
+                        name: infrastructure-config
+                        key: aws_region
+                  - name: TERRAFORM_RUN_ID
+                    valueFrom:
+                      configMapKeyRef:
+                        name: infrastructure-config
+                        key: terraform_run_id
+                  - name: ENVIRONMENT
+                    valueFrom:
+                      configMapKeyRef:
+                        name: infrastructure-config
+                        key: environment
+                  livenessProbe:
+                    httpGet:
+                      path: /health
+                      port: 8080
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                    timeoutSeconds: 5
+                    failureThreshold: 3
+                  readinessProbe:
+                    httpGet:
+                      path: /ready
+                      port: 8080
+                    initialDelaySeconds: 10
+                    periodSeconds: 5
+                    timeoutSeconds: 3
+                    failureThreshold: 3
+                  resources:
+                    requests:
+                      memory: "256Mi"
+                      cpu: "250m"
+                    limits:
+                      memory: "512Mi"
+                      cpu: "500m"
+    
+    - name: Create Service
+      kubernetes.core.k8s:
+        api_key: "{{ k8s_auth.k8s_auth.api_key }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ application_name }}"
+            namespace: "{{ openshift_namespace }}"
+            labels:
+              app: "{{ application_name }}"
+              terraform-run-id: "{{ terraform_run_id }}"
+          spec:
+            selector:
+              app: "{{ application_name }}"
+            ports:
+            - name: http
+              port: 8080
+              targetPort: 8080
+              protocol: TCP
+            type: ClusterIP
+    
+    - name: Create Route
+      kubernetes.core.k8s:
+        api_key: "{{ k8s_auth.k8s_auth.api_key }}"
+        state: present
+        definition:
+          apiVersion: route.openshift.io/v1
+          kind: Route
+          metadata:
+            name: "{{ application_name }}"
+            namespace: "{{ openshift_namespace }}"
+            labels:
+              app: "{{ application_name }}"
+              terraform-run-id: "{{ terraform_run_id }}"
+          spec:
+            to:
+              kind: Service
+              name: "{{ application_name }}"
+              weight: 100
+            port:
+              targetPort: http
+            tls:
+              termination: edge
+              insecureEdgeTerminationPolicy: Redirect
+            wildcardPolicy: None
+    
+    - name: Wait for deployment to be ready
+      kubernetes.core.k8s_info:
+        api_key: "{{ k8s_auth.k8s_auth.api_key }}"
+        kind: Deployment
+        name: "{{ application_name }}"
+        namespace: "{{ openshift_namespace }}"
+      register: deployment
+      until: >
+        deployment.resources | length > 0 and
+        deployment.resources[0].status.readyReplicas is defined and
+        deployment.resources[0].status.readyReplicas == (replicas | int)
+      retries: 30
+      delay: 10
+    
+    - name: Get application route
+      kubernetes.core.k8s_info:
+        api_key: "{{ k8s_auth.k8s_auth.api_key }}"
+        kind: Route
+        name: "{{ application_name }}"
+        namespace: "{{ openshift_namespace }}"
+      register: route
+    
+    - name: Get pod information
+      kubernetes.core.k8s_info:
+        api_key: "{{ k8s_auth.k8s_auth.api_key }}"
+        kind: Pod
+        namespace: "{{ openshift_namespace }}"
+        label_selectors:
+          - "app={{ application_name }}"
+      register: pods
+    
+    - name: Display deployment success
+      debug:
+        msg:
+          - "========================================="
+          - "✅ Deployment Successful!"
+          - "========================================="
+          - "Application URL: https://{{ route.resources[0].spec.host }}"
+          - "Namespace: {{ openshift_namespace }}"
+          - "Replicas: {{ deployment.resources[0].status.readyReplicas }}/{{ replicas }}"
+          - "Pods:"
+          - "{{ pods.resources | map(attribute='metadata.name') | list }}"
+          - ""
+          - "Infrastructure Details:"
+          - "  Terraform Run ID: {{ terraform_run_id }}"
+          - "  VPC ID: {{ vpc_id }}"
+          - "  AWS Region: {{ aws_region }}"
+          - "  Backend Instances: {{ instances | length }}"
+          - "  Backend IPs: {{ backend_ips }}"
+          - "========================================="
+    
+    - name: Test application endpoint
+      uri:
+        url: "https://{{ route.resources[0].spec.host }}/health"
+        method: GET
+        validate_certs: no
+        status_code: 200
+      register: health_check
+      retries: 5
+      delay: 10
+      until: health_check.status == 200
+      ignore_errors: yes
+    
+    - name: Display health check result
+      debug:
+        msg: "Application health check: {{ 'PASSED ✅' if health_check.status == 200 else 'FAILED ❌' }}"
+
+# Made with Bob

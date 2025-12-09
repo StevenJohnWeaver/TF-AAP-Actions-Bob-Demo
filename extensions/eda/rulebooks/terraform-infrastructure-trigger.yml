@@ -1,0 +1,78 @@
+---
+# EDA Rulebook for Terraform Infrastructure Events
+# This rulebook listens to the terraform-infrastructure-events stream
+# and triggers AAP job templates when infrastructure is provisioned
+
+- name: Terraform Infrastructure Event Handler
+  hosts: all
+  
+  sources:
+    - name: Listen to Terraform event stream
+      ansible.eda.generic:
+        event_stream_name: terraform-infrastructure-events
+        
+  rules:
+    # Main rule: Handle infrastructure provisioned events
+    - name: Handle Infrastructure Provisioned Event
+      condition: >
+        event.source == "terraform" and
+        event.event_type == "infrastructure_provisioned"
+      
+      action:
+        run_job_template:
+          name: "Configure AWS Infrastructure"
+          organization: "Default"
+          inventory: "Dynamic AWS Inventory"
+          
+          extra_vars:
+            # Terraform context
+            terraform_workspace: "{{ event.terraform.workspace }}"
+            terraform_organization: "{{ event.terraform.organization }}"
+            terraform_run_id: "{{ event.terraform.run_id }}"
+            
+            # VPC details
+            vpc_id: "{{ event.infrastructure.vpc.id }}"
+            vpc_cidr: "{{ event.infrastructure.vpc.cidr }}"
+            
+            # Instance details
+            instances: "{{ event.infrastructure.instances }}"
+            
+            # Security groups
+            security_groups: "{{ event.infrastructure.security_groups }}"
+            
+            # AWS metadata
+            aws_region: "{{ event.infrastructure.region }}"
+            environment: "{{ event.infrastructure.environment }}"
+            
+            # Ansible inventory structure
+            ansible_inventory_data: "{{ event.ansible_inventory }}"
+            
+            # OpenShift deployment configuration
+            openshift_namespace: "{{ event.deployment.openshift_namespace }}"
+            application_name: "{{ event.deployment.application_name }}"
+            replicas: "{{ event.deployment.replicas }}"
+            
+            # HCP Vault configuration
+            vault_address: "{{ event.vault.address }}"
+            vault_namespace: "{{ event.vault.namespace }}"
+    
+    # Secondary rule: Log all Terraform events for debugging
+    - name: Log Terraform Events
+      condition: event.source == "terraform"
+      action:
+        debug:
+          msg: |
+            Received Terraform event:
+            - Type: {{ event.event_type }}
+            - Workspace: {{ event.terraform.workspace }}
+            - Run ID: {{ event.terraform.run_id }}
+            - Timestamp: {{ event.timestamp }}
+    
+    # Error handling: Log unexpected events
+    - name: Log Unknown Events
+      condition: event.source != "terraform"
+      action:
+        debug:
+          msg: "Received unexpected event from source: {{ event.source }}"
+
+# Made with Bob

@@ -1,0 +1,70 @@
+# Red Hat + HashiCorp Demo - Example Terraform Variables
+# Copy this file to terraform.tfvars and fill in your values
+
+# ============================================================================
+# HCP Vault Configuration
+# ============================================================================
+hcp_vault_address   = "https://your-cluster.vault.hashicorp.cloud:8200"
+hcp_vault_namespace = "admin"
+# hcp_vault_token is sensitive - set via environment variable or HCP Terraform workspace variable
+# export TF_VAR_hcp_vault_token="your-vault-token"
+
+# ============================================================================
+# Ansible Automation Platform Configuration
+# ============================================================================
+aap_host = "https://aap-controller.example.com"
+# aap_username and aap_password are sensitive - set via environment variables or HCP Terraform workspace variables
+# export TF_VAR_aap_username="admin"
+# export TF_VAR_aap_password="your-password"
+
+eda_event_stream_name = "terraform-infrastructure-events"
+
+# ============================================================================
+# AWS Configuration
+# ============================================================================
+aws_region = "us-east-1"
+
+# VPC Configuration
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.10.0/24", "10.0.11.0/24"]
+
+# EC2 Configuration
+instance_count = 2
+instance_type  = "t3.medium"
+# ami_id = ""  # Leave empty to use latest Amazon Linux 2
+ssh_key_name = "your-ssh-key-name"
+
+# Security Configuration
+ssh_cidr_blocks = ["0.0.0.0/0"]  # Restrict this in production!
+
+# ============================================================================
+# Ansible Configuration
+# ============================================================================
+ansible_user         = "ec2-user"
+ansible_ssh_key_path = "~/.ssh/your-key.pem"
+
+# ============================================================================
+# OpenShift Configuration
+# ============================================================================
+openshift_namespace = "demo-app"
+application_name    = "demo-app"
+openshift_replicas  = 2
+
+# ============================================================================
+# General Configuration
+# ============================================================================
+environment  = "demo"
+project_name = "redhat-hashicorp"
+
+# terraform_run_id is auto-populated by HCP Terraform
+# terraform_run_id = "run-xxxxx"
+
+# ============================================================================
+# Additional Tags (Optional)
+# ============================================================================
+additional_tags = {
+  Owner       = "your-name"
+  CostCenter  = "demo"
+  Department  = "engineering"
+}
