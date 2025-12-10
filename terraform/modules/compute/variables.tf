@@ -62,6 +62,12 @@ variable "root_volume_size" {
   default     = 20
 }
 
+variable "environment" {
+  description = "Environment name (e.g., dev, staging, prod)"
+  type        = string
+  default     = "demo"
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)

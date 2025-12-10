@@ -45,7 +45,7 @@ resource "aws_instance" "app" {
     tags = merge(
       var.tags,
       {
-        Name = "${var.tags["Environment"]}-app-server-${count.index + 1}-root"
+        Name = "${var.environment}-app-server-${count.index + 1}-root"
       }
     )
   }

@@ -119,6 +119,7 @@ module "compute" {
   ami_id            = var.ami_id
   key_name          = var.ssh_key_name
   security_group_id = module.security.app_sg_id
+  environment       = var.environment
   
   tags = {
     Component = "compute"
