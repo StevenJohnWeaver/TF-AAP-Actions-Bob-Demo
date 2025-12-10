@@ -19,10 +19,9 @@
         event.payload.job_template_name == "Configure AWS Infrastructure"
       
       action:
-        awx.awx.job_launch:
-          job_template: "{{ event.payload.job_template_name }}"
+        run_job_template:
+          name: "{{ event.payload.job_template_name }}"
           organization: "{{ event.payload.organization_name }}"
-          inventory: "Dynamic AWS Inventory"
           controller_host: "{{ ansible_env.CONTROLLER_HOST | default('https://sandbox-aap-steveweaver-hashi-dev.apps.rm2.thpm.p1.openshiftapps.com') }}"
           controller_oauthtoken: "{{ ansible_env.CONTROLLER_OAUTH_TOKEN }}"
           validate_certs: true
