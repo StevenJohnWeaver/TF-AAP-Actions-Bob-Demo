@@ -137,6 +137,67 @@ resource "terraform_data" "trigger_aap_action" {
   depends_on = [
     module.vpc,
     module.compute,
+    module.security
+  ]
+  
+  # Trigger on infrastructure changes
+  input = {
+    vpc_id       = module.vpc.vpc_id
+    instance_ids = module.compute.instance_ids
+  }
+  
+  lifecycle {
+    action_trigger {
+      events  = [after_create]
+      actions = [action.aap_eda_eventstream_post.infrastructure_ready]
+    }
+  }
+}
+
+# Outputs for reference and validation
+output "infrastructure_details" {
+  value = {
+    vpc_id          = module.vpc.vpc_id
+    vpc_cidr        = module.vpc.vpc_cidr
+    instance_ids    = module.compute.instance_ids
+    private_ips     = module.compute.private_ips
+    public_ips      = module.compute.public_ips
+    security_groups = module.security.security_group_ids
+  }
+  description = "Infrastructure details"
+}
+
+output "ansible_inventory" {
+  value = {
+    for idx, id in module.compute.instance_ids :
+    "app-server-${idx + 1}" => {
+      instance_id = id
+      private_ip  = module.compute.private_ips[idx]
+      public_ip   = module.compute.public_ips[idx]
+    }
+  }
+  description = "Ansible inventory structure"
+}
+
+output "eda_event_posted" {
+  value = {
+    event_stream = var.eda_event_stream_name
+    timestamp    = timestamp()
+    status       = "Action configured to post to AAP EDA"
+  }
+  description = "EDA event posting confirmation"
+  depends_on  = [terraform_data.trigger_aap_action]
+}
+
+output "deployment_info" {
+  value = {
+    terraform_run_id    = var.terraform_run_id
+    aws_region          = var.aws_region
+    environment         = var.environment
+    openshift_namespace = var.openshift_namespace
+    application_name    = var.application_name
+  }
+  description = "Deployment metadata"
 
 # ============================================================================
 # OpenShift Cluster Module (COMMENTED OUT FOR DEMO)
@@ -259,65 +320,4 @@ output "openshift_cluster_info" {
 #    - Autoscaling optimizes resource usage
 #    - Vault manages credentials across all platforms
 # ============================================================================
-    module.security
-  ]
-  
-  # Trigger on infrastructure changes
-  input = {
-    vpc_id       = module.vpc.vpc_id
-    instance_ids = module.compute.instance_ids
-  }
-  
-  lifecycle {
-    action_trigger {
-      events  = [after_create]
-      actions = [action.aap_eda_eventstream_post.infrastructure_ready]
-    }
-  }
-}
-
-# Outputs for reference and validation
-output "infrastructure_details" {
-  value = {
-    vpc_id          = module.vpc.vpc_id
-    vpc_cidr        = module.vpc.vpc_cidr
-    instance_ids    = module.compute.instance_ids
-    private_ips     = module.compute.private_ips
-    public_ips      = module.compute.public_ips
-    security_groups = module.security.security_group_ids
-  }
-  description = "Infrastructure details"
-}
-
-output "ansible_inventory" {
-  value = {
-    for idx, id in module.compute.instance_ids :
-    "app-server-${idx + 1}" => {
-      instance_id = id
-      private_ip  = module.compute.private_ips[idx]
-      public_ip   = module.compute.public_ips[idx]
-    }
-  }
-  description = "Ansible inventory structure"
-}
-
-output "eda_event_posted" {
-  value = {
-    event_stream = var.eda_event_stream_name
-    timestamp    = timestamp()
-    status       = "Action configured to post to AAP EDA"
-  }
-  description = "EDA event posting confirmation"
-  depends_on  = [terraform_data.trigger_aap_action]
-}
-
-output "deployment_info" {
-  value = {
-    terraform_run_id    = var.terraform_run_id
-    aws_region          = var.aws_region
-    environment         = var.environment
-    openshift_namespace = var.openshift_namespace
-    application_name    = var.application_name
-  }
-  description = "Deployment metadata"
 }
