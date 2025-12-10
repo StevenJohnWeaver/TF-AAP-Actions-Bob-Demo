@@ -8,9 +8,8 @@
   
   sources:
     - name: Listen to Terraform event stream
-      ansible.eda.webhook:
-        host: 0.0.0.0
-        port: 5000
+      ansible.eda.generic:
+        event_stream_name: terraform-infrastructure-events
         
   rules:
     # Main rule: Handle infrastructure provisioned events
