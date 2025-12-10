@@ -3,7 +3,12 @@
 
 # Allow creating child tokens (required by Vault provider)
 path "auth/token/create" {
-  capabilities = ["create", "update"]
+  capabilities = ["create", "update", "sudo"]
+}
+
+# Allow creating child tokens with orphan flag
+path "auth/token/create-orphan" {
+  capabilities = ["create", "update", "sudo"]
 }
 
 # Allow renewing tokens
