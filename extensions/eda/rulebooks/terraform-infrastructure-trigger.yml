@@ -19,10 +19,14 @@
         event.event_type == "infrastructure_provisioned"
       
       action:
-        run_job_template:
-          name: "Configure AWS Infrastructure"
+        awx.awx.job_launch:
+          job_template: "Configure AWS Infrastructure"
           organization: "Default"
           inventory: "Dynamic AWS Inventory"
+          controller_host: "{{ ansible_env.CONTROLLER_HOST | default('https://sandbox-aap-steveweaver-hashi-dev.apps.rm2.thpm.p1.openshiftapps.com') }}"
+          controller_oauthtoken: "{{ ansible_env.CONTROLLER_OAUTH_TOKEN }}"
+          validate_certs: true
+          wait: false
           
           extra_vars:
             # Terraform context
