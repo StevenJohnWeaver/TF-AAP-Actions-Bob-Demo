@@ -137,6 +137,128 @@ resource "terraform_data" "trigger_aap_action" {
   depends_on = [
     module.vpc,
     module.compute,
+
+# ============================================================================
+# OpenShift Cluster Module (COMMENTED OUT FOR DEMO)
+# ============================================================================
+# This module demonstrates Terraform's capability to provision OpenShift clusters
+# alongside traditional cloud infrastructure. Uncomment to actually deploy ROSA.
+#
+# NOTE: Deploying ROSA incurs significant costs (~$500-1400/month)
+# For demo purposes, this is shown but not executed.
+# ============================================================================
+
+/*
+module "openshift_cluster" {
+  source = "./modules/openshift-rosa"
+  
+  # Cluster identification
+  cluster_name   = "${var.project_name}-openshift-${var.environment}"
+  aws_region     = var.aws_region
+  aws_account_id = data.aws_caller_identity.current.account_id
+  
+  # Use the VPC and subnets created above
+  availability_zones = var.availability_zones
+  subnet_ids         = module.vpc.private_subnet_ids
+  
+  # Networking - align with VPC module
+  machine_cidr = module.vpc.vpc_cidr
+  service_cidr = "172.30.0.0/16"
+  pod_cidr     = "10.128.0.0/14"
+  host_prefix  = 23
+  
+  # Cluster configuration
+  openshift_version    = "4.14"
+  compute_machine_type = "m5.xlarge"
+  compute_nodes        = 3
+  multi_az             = true
+  
+  # AI/ML capabilities - GPU nodes for AI workloads
+  enable_gpu_nodes         = true
+  gpu_machine_type         = "g4dn.xlarge"  # NVIDIA T4 GPUs
+  gpu_node_count           = 2
+  gpu_autoscaling_enabled  = true
+  gpu_min_replicas         = 1
+  gpu_max_replicas         = 5
+  
+  # Cluster autoscaling
+  enable_autoscaling = true
+  max_nodes_total    = 10
+  max_cores          = 100
+  max_memory_gb      = 400
+  
+  # GitOps for application deployment
+  enable_gitops        = true
+  account_role_prefix  = "ManagedOpenShift"
+  
+  # Admin access
+  create_admin_user = true
+  admin_username    = "cluster-admin"
+  admin_password    = var.openshift_admin_password  # Store in Vault!
+  
+  # IAM
+  rosa_creator_arn = data.aws_caller_identity.current.arn
+  
+  # Cost optimization
+  disable_workload_monitoring = false  # Enable for production
+  
+  # Tags
+  common_tags = local.common_tags
+  environment = var.environment
+  
+  # Dependencies - ensure VPC is created first
+  depends_on = [module.vpc]
+}
+
+# Store OpenShift credentials in Vault
+resource "vault_kv_secret_v2" "openshift_cluster" {
+  mount = "secret"
+  name  = "openshift/cluster"
+  
+  data_json = jsonencode({
+    cluster_id   = module.openshift_cluster.cluster_id
+    cluster_name = module.openshift_cluster.cluster_name
+    api_url      = module.openshift_cluster.api_url
+    console_url  = module.openshift_cluster.console_url
+    domain       = module.openshift_cluster.domain
+    region       = var.aws_region
+    admin_user   = module.openshift_cluster.admin_credentials.username
+    admin_pass   = module.openshift_cluster.admin_credentials.password
+  })
+  
+  depends_on = [module.openshift_cluster]
+}
+
+# Output OpenShift cluster information
+output "openshift_cluster_info" {
+  description = "OpenShift cluster details"
+  value = {
+    cluster_id  = module.openshift_cluster.cluster_id
+    api_url     = module.openshift_cluster.api_url
+    console_url = module.openshift_cluster.console_url
+    state       = module.openshift_cluster.state
+  }
+}
+*/
+
+# ============================================================================
+# Demo Notes for OpenShift Module
+# ============================================================================
+# During the demo, you can:
+# 1. Show this commented code to illustrate unified provisioning
+# 2. Explain how the same Terraform patterns work for:
+#    - AWS infrastructure (VPC, EC2, Security Groups)
+#    - OpenShift clusters (ROSA)
+#    - Multi-cloud environments (Azure, GCP with similar modules)
+# 3. Highlight AI-ready features:
+#    - GPU node pools for machine learning
+#    - Autoscaling for variable workloads
+#    - GitOps integration for application deployment
+# 4. Emphasize cost control:
+#    - Infrastructure as code enables easy cleanup
+#    - Autoscaling optimizes resource usage
+#    - Vault manages credentials across all platforms
+# ============================================================================
     module.security
   ]
   
