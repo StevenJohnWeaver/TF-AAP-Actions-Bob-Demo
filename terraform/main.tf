@@ -43,6 +43,21 @@ provider "vault" {
   token     = var.hcp_vault_token
 }
 
+provider "vault" {
+  address   = var.hcp_vault_address
+  namespace = var.hcp_vault_namespace
+  
+  # Use AppRole instead of token
+  auth_login {
+    path = "auth/approle/login"
+    
+    parameters = {
+      role_id   = var.vault_role_id
+      secret_id = var.vault_secret_id
+    }
+  }
+}
+
 # Fetch dynamic AWS credentials from HCP Vault
 data "vault_aws_access_credentials" "creds" {
   backend = "aws"
