@@ -30,10 +30,10 @@ terraform {
 # Configure AAP Provider for EDA integration
 provider "aap" {
   host     = var.aap_host
-  username = var.aap_username
-  password = var.aap_password
+  # username = var.aap_username
+  # password = var.aap_password
   # Alternatively, use token authentication:
-  # token = var.aap_token
+  token = var.aap_token
 }
 
 # Configure Vault Provider for HCP Vault
