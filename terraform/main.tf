@@ -137,7 +137,7 @@ action "aap_eda_eventstream_post" "infrastructure_ready" {
     event_stream_config = {
       username = var.eda_event_stream_username
       password = var.eda_event_stream_password
-      url      = "${var.aap_host}/api/eda/v1/event-streams/${var.eda_event_stream_name}/post/"
+      url      = "${var.aap_host}/eda-event-streams/api/eda/v1/external_event_stream/${var.eda_event_stream_uuid}/post/"
     }
   }
 }

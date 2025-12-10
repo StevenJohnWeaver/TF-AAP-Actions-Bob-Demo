@@ -67,6 +67,12 @@ variable "eda_event_stream_name" {
   default     = "terraform-infrastructure-events"
 }
 
+variable "eda_event_stream_uuid" {
+  description = "UUID of the EDA event stream (found in event stream URL)"
+  type        = string
+  sensitive   = true
+}
+
 variable "eda_event_stream_username" {
   description = "Username for posting events to the EDA event stream"
   type        = string
