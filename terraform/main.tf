@@ -40,12 +40,6 @@ provider "aap" {
 provider "vault" {
   address   = var.hcp_vault_address
   namespace = var.hcp_vault_namespace
-  token     = var.hcp_vault_token
-}
-
-provider "vault" {
-  address   = var.hcp_vault_address
-  namespace = var.hcp_vault_namespace
   
   # Use AppRole instead of token
   auth_login {
