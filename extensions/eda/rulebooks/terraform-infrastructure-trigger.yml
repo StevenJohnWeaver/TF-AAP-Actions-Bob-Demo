@@ -12,16 +12,16 @@
         event_stream_name: terraform-infrastructure-events
         
   rules:
-    # Main rule: Handle infrastructure provisioned events
-    - name: Handle Infrastructure Provisioned Event
+    # Main rule: Handle Terraform Actions job template trigger
+    - name: Handle Terraform Action Job Template
       condition: >
-        event.source == "terraform" and
-        event.event_type == "infrastructure_provisioned"
+        event.payload.template_type == "job" and
+        event.payload.job_template_name == "Configure AWS Infrastructure"
       
       action:
         awx.awx.job_launch:
-          job_template: "Configure AWS Infrastructure"
-          organization: "Default"
+          job_template: "{{ event.payload.job_template_name }}"
+          organization: "{{ event.payload.organization_name }}"
           inventory: "Dynamic AWS Inventory"
           controller_host: "{{ ansible_env.CONTROLLER_HOST | default('https://sandbox-aap-steveweaver-hashi-dev.apps.rm2.thpm.p1.openshiftapps.com') }}"
           controller_oauthtoken: "{{ ansible_env.CONTROLLER_OAUTH_TOKEN }}"
