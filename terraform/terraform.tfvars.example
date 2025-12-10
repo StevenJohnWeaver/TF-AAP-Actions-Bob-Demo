@@ -13,11 +13,20 @@ hcp_vault_namespace = "admin"
 # Ansible Automation Platform Configuration
 # ============================================================================
 aap_host = "https://aap-controller.example.com"
-# aap_username and aap_password are sensitive - set via environment variables or HCP Terraform workspace variables
-# export TF_VAR_aap_username="admin"
-# export TF_VAR_aap_password="your-password"
 
+# AAP Admin Credentials (for AAP provider authentication)
+# These are sensitive - set via environment variables or HCP Terraform workspace variables
+# export TF_VAR_aap_username="admin"
+# export TF_VAR_aap_password="your-admin-password"
+
+# EDA Event Stream Configuration
 eda_event_stream_name = "terraform-infrastructure-events"
+
+# EDA Event Stream Credentials (for posting events to the event stream)
+# These are DIFFERENT from AAP admin credentials
+# Create a dedicated credential in AAP for the event stream, then set these:
+# export TF_VAR_eda_event_stream_username="terraform-events"
+# export TF_VAR_eda_event_stream_password="your-event-stream-password"
 
 # ============================================================================
 # AWS Configuration

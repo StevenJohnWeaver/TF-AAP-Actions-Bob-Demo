@@ -55,6 +55,18 @@ variable "eda_event_stream_name" {
   default     = "terraform-infrastructure-events"
 }
 
+variable "eda_event_stream_username" {
+  description = "Username for posting events to the EDA event stream"
+  type        = string
+  sensitive   = true
+}
+
+variable "eda_event_stream_password" {
+  description = "Password for posting events to the EDA event stream"
+  type        = string
+  sensitive   = true
+}
+
 # ============================================================================
 # AWS Configuration
 # ============================================================================
