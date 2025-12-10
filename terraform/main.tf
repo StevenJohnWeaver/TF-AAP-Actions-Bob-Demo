@@ -117,123 +117,41 @@ module "compute" {
   }
 }
 
-# Post infrastructure provisioning event to AAP EDA
-resource "aap_eda_eventstream_post" "infrastructure_ready" {
-  # Ensure all infrastructure is created before posting event
+# Define action to post event to AAP EDA after infrastructure is created
+action "aap_eda_eventstream_post" "infrastructure_ready" {
+  config {
+    limit             = "all"
+    template_type     = "job"
+    job_template_name = "Configure AWS Infrastructure"
+    organization_name = "Default"
+    event_stream_config = {
+      username = var.aap_username
+      password = var.aap_password
+      url      = "${var.aap_host}/api/eda/v1/event-streams/${var.eda_event_stream_name}/post/"
+    }
+  }
+}
+
+# Trigger the action after compute resources are created
+resource "terraform_data" "trigger_aap_action" {
   depends_on = [
     module.vpc,
     module.compute,
     module.security
   ]
   
-  # Name of the EDA event stream (must exist in AAP)
-  event_stream_name = var.eda_event_stream_name
+  # Trigger on infrastructure changes
+  input = {
+    vpc_id       = module.vpc.vpc_id
+    instance_ids = module.compute.instance_ids
+  }
   
-  # Event payload - this is what the EDA rulebook will receive
-  event = jsonencode({
-    # Event metadata
-    source      = "terraform"
-    event_type  = "infrastructure_provisioned"
-    timestamp   = timestamp()
-    
-    # Terraform context
-    terraform = {
-      workspace    = "aws-infrastructure"
-      organization = "redhat-hashicorp-demo"
-      run_id       = var.terraform_run_id
+  lifecycle {
+    action_trigger {
+      events  = [after_create]
+      actions = [action.aap_eda_eventstream_post.infrastructure_ready]
     }
-    
-    # Infrastructure details
-    infrastructure = {
-      # VPC information
-      vpc = {
-        id   = module.vpc.vpc_id
-        cidr = module.vpc.vpc_cidr
-        public_subnets = [
-          for subnet in module.vpc.public_subnet_ids : {
-            id   = subnet
-            cidr = module.vpc.public_subnet_cidrs[index(module.vpc.public_subnet_ids, subnet)]
-          }
-        ]
-        private_subnets = [
-          for subnet in module.vpc.private_subnet_ids : {
-            id   = subnet
-            cidr = module.vpc.private_subnet_cidrs[index(module.vpc.private_subnet_ids, subnet)]
-          }
-        ]
-      }
-      
-      # EC2 instances
-      instances = [
-        for idx, id in module.compute.instance_ids : {
-          id         = id
-          name       = "app-server-${idx + 1}"
-          private_ip = module.compute.private_ips[idx]
-          public_ip  = module.compute.public_ips[idx]
-          role       = "app-server"
-          subnet_id  = module.compute.subnet_ids[idx]
-        }
-      ]
-      
-      # Security groups
-      security_groups = {
-        app_sg_id = module.security.app_sg_id
-        web_sg_id = module.security.web_sg_id
-      }
-      
-      # AWS metadata
-      region      = var.aws_region
-      environment = var.environment
-    }
-    
-    # Ansible inventory structure for AAP
-    ansible_inventory = {
-      all = {
-        hosts = {
-          for idx, id in module.compute.instance_ids :
-          "app-server-${idx + 1}" => {
-            ansible_host = module.compute.private_ips[idx]
-            instance_id  = id
-            public_ip    = module.compute.public_ips[idx]
-            ansible_user = var.ansible_user
-          }
-        }
-        vars = {
-          ansible_ssh_private_key_file = var.ansible_ssh_key_path
-          aws_region                   = var.aws_region
-          vpc_id                       = module.vpc.vpc_id
-          environment                  = var.environment
-        }
-      }
-      children = {
-        app_servers = {
-          hosts = [
-            for idx in range(length(module.compute.instance_ids)) :
-            "app-server-${idx + 1}"
-          ]
-        }
-        aws_ec2 = {
-          hosts = [
-            for idx in range(length(module.compute.instance_ids)) :
-            "app-server-${idx + 1}"
-          ]
-        }
-      }
-    }
-    
-    # OpenShift deployment configuration
-    deployment = {
-      openshift_namespace = var.openshift_namespace
-      application_name    = var.application_name
-      replicas           = var.openshift_replicas
-    }
-    
-    # HCP Vault configuration for AAP
-    vault = {
-      address   = var.hcp_vault_address
-      namespace = var.hcp_vault_namespace
-    }
-  })
+  }
 }
 
 # Outputs for reference and validation
@@ -265,10 +183,10 @@ output "eda_event_posted" {
   value = {
     event_stream = var.eda_event_stream_name
     timestamp    = timestamp()
-    status       = "Event posted to AAP EDA successfully"
+    status       = "Action configured to post to AAP EDA"
   }
   description = "EDA event posting confirmation"
-  depends_on  = [aap_eda_eventstream_post.infrastructure_ready]
+  depends_on  = [terraform_data.trigger_aap_action]
 }
 
 output "deployment_info" {
