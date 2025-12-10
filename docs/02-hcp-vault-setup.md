@@ -423,18 +423,48 @@ You can test the connection by running a plan in HCP Terraform. It should now be
 
 ## Step 9: Configure Vault Audit Logging
 
-### 9.1 Enable Audit Device
+### 9.1 HCP Vault Audit Logs
 
-```bash
-# Enable file audit device
-vault audit enable file file_path=/vault/logs/audit.log
+**Important:** HCP Vault (managed service) handles audit logging automatically. You **cannot** enable file-based audit devices because you don't have filesystem access.
+
+**Error you might see:**
+```
+Error enabling audit device: unsupported path
 ```
 
-### 9.2 View Audit Logs (in HCP Portal)
+This is expected and normal for HCP Vault!
 
-1. Go to HCP Portal → Your Vault cluster
-2. Click **"Audit logs"**
-3. You'll see all Vault operations logged
+### 9.2 View Audit Logs in HCP Portal
+
+**Important:** Audit log visibility depends on your HCP Vault tier.
+
+**Development Tier (Free):**
+- ❌ Audit logs are NOT visible in the UI
+- ✅ Audit logging is still happening (HCP manages it)
+- ✅ Logs are retained by HashiCorp for compliance
+- ℹ️ You'll see: Overview, Replication, Networking tabs only
+
+**Standard/Plus Tiers:**
+- ✅ Audit logs visible in "Observability" or "Audit Logs" tab
+- ✅ Full audit trail with filtering and search
+- ✅ Export capabilities
+
+**For this demo with Development tier:**
+You can safely skip viewing audit logs. They're being collected by HCP automatically, but UI access requires upgrading to Standard tier ($0.50/hour).
+
+### 9.3 Verify Audit Configuration
+
+```bash
+# Check audit devices (HCP manages these internally)
+vault audit list
+```
+
+**Expected output:**
+```
+No audit devices are enabled.
+```
+
+**Note:** This is normal for HCP Vault. Audit logging is managed by HCP and visible only in the portal, not via CLI.
 
 ---
 

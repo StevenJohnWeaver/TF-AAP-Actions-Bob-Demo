@@ -8,7 +8,8 @@
   gather_facts: no
   
   vars:
-    openshift_api_url: "https://api.crc.testing:6443"
+    # OpenShift API URL - can be overridden via extra vars or environment
+    openshift_api_url: "{{ lookup('env', 'OPENSHIFT_API_URL') | default('https://api.crc.testing:6443') }}"
     
   tasks:
     - name: Display deployment context
