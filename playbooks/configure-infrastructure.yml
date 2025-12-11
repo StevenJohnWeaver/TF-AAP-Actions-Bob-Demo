@@ -36,7 +36,7 @@
           secret_id: "{{ lookup('env', 'VAULT_SECRET_ID') }}"
         status_code: 200
       register: vault_login
-      no_log: true
+      no_log: false
     
     - name: Set Vault token fact
       set_fact:
