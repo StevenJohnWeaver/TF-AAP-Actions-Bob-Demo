@@ -26,11 +26,11 @@
     
     - name: Authenticate to HCP Vault using AppRole
       uri:
-        url: "{{ vault_address }}/v1/auth/approle/login"
+        url: "{{ lookup('env', 'VAULT_ADDR') }}/v1/auth/approle/login"
         method: POST
         body_format: json
         headers:
-          X-Vault-Namespace: "{{ vault_namespace }}"
+          X-Vault-Namespace: "{{ lookup('env', 'VAULT_NAMESPACE') }}"
         body:
           role_id: "{{ lookup('env', 'VAULT_ROLE_ID') }}"
           secret_id: "{{ lookup('env', 'VAULT_SECRET_ID') }}"
@@ -45,11 +45,11 @@
     
     - name: Fetch application secrets from HCP Vault
       uri:
-        url: "{{ vault_address }}/v1/secret/data/applications/demo-app"
+        url: "{{ lookup('env', 'VAULT_ADDR') }}/v1/secret/data/applications/demo-app"
         method: GET
         headers:
           X-Vault-Token: "{{ vault_token }}"
-          X-Vault-Namespace: "{{ vault_namespace }}"
+          X-Vault-Namespace: "{{ lookup('env', 'VAULT_NAMESPACE') }}"
         status_code: 200
       register: app_secrets
       no_log: true
@@ -95,8 +95,8 @@
   
   vars:
     vault_token: "{{ hostvars['localhost']['vault_token'] }}"
-    vault_address: "{{ hostvars['localhost']['vault_address'] }}"
-    vault_namespace: "{{ hostvars['localhost']['vault_namespace'] }}"
+    vault_address: "{{ lookup('env', 'VAULT_ADDR') }}"
+    vault_namespace: "{{ lookup('env', 'VAULT_NAMESPACE') }}"
     database_url: "{{ hostvars['localhost']['database_url'] }}"
     api_key: "{{ hostvars['localhost']['api_key'] }}"
   
