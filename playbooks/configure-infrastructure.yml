@@ -27,7 +27,7 @@
     
     - name: Authenticate to HCP Vault using AppRole
       uri:
-        url: "{{ lookup('env', 'VAULT_ADDR') }}/v1/auth/approle/login"
+        url: "{{ lookup('env', 'VAULT_ADDR') | regex_replace('/$', '') }}/v1/auth/approle/login"
         method: POST
         body_format: json
         headers:
@@ -46,7 +46,7 @@
     
     - name: Fetch application secrets from HCP Vault
       uri:
-        url: "{{ lookup('env', 'VAULT_ADDR') }}/v1/secret/data/applications/demo-app"
+        url: "{{ lookup('env', 'VAULT_ADDR') | regex_replace('/$', '') }}/v1/secret/data/applications/demo-app"
         method: GET
         headers:
           X-Vault-Token: "{{ vault_token }}"
@@ -96,7 +96,7 @@
   
   vars:
     vault_token: "{{ hostvars['localhost']['vault_token'] }}"
-    vault_address: "{{ lookup('env', 'VAULT_ADDR') }}"
+    vault_address: "{{ lookup('env', 'VAULT_ADDR') | regex_replace('/$', '') }}"
     vault_namespace: "{{ lookup('env', 'VAULT_NAMESPACE') }}"
     database_url: "{{ hostvars['localhost']['database_url'] }}"
     api_key: "{{ hostvars['localhost']['api_key'] }}"
