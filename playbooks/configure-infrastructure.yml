@@ -25,6 +25,14 @@
           - "Instance Count: {{ instances | length }}"
           - "========================================="
     
+    - name: Debug Vault environment variables
+      debug:
+        msg:
+          - "VAULT_ADDR: {{ lookup('env', 'VAULT_ADDR') }}"
+          - "VAULT_NAMESPACE: {{ lookup('env', 'VAULT_NAMESPACE') }}"
+          - "VAULT_ROLE_ID: {{ lookup('env', 'VAULT_ROLE_ID')[:8] }}..."
+          - "VAULT_SECRET_ID: {{ 'SET' if lookup('env', 'VAULT_SECRET_ID') else 'NOT SET' }}"
+
     - name: Authenticate to HCP Vault using AppRole
       uri:
         url: "{{ lookup('env', 'VAULT_ADDR') | regex_replace('/$', '') }}/v1/auth/approle/login"
