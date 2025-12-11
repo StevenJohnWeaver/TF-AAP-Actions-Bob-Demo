@@ -113,7 +113,7 @@ module "compute" {
   source = "./modules/compute"
   
   vpc_id            = module.vpc.vpc_id
-  subnet_ids        = module.vpc.private_subnet_ids
+  subnet_ids        = module.vpc.public_subnet_ids  # Changed from private to public for SSH access
   instance_count    = var.instance_count
   instance_type     = var.instance_type
   ami_id            = var.ami_id
