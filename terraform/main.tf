@@ -3,9 +3,9 @@
 
 terraform {
   cloud {
-    organization = "redhat-hashicorp-demo"
+    organization = "steve-weaver-demo-org"
     workspaces {
-      name = "aws-infrastructure"
+      name = "AI_Workload_Infrastructure"
     }
   }
   
@@ -127,18 +127,11 @@ module "compute" {
   }
 }
 
-# Define action to post event to AAP EDA after infrastructure is created
-action "aap_eda_eventstream_post" "infrastructure_ready" {
+# Define action to directly launch AAP job template after infrastructure is created
+action "aap_job_launch" "configure_infrastructure" {
   config {
-    limit             = "all"
-    template_type     = "job"
-    job_template_name = "Configure AWS Infrastructure"
-    organization_name = "Default"
-    event_stream_config = {
-      username = var.eda_event_stream_username
-      password = var.eda_event_stream_password
-      url      = "${var.aap_host}/eda-event-streams/api/eda/v1/external_event_stream/${var.eda_event_stream_uuid}/post/"
-    }
+    job_template_id     = var.aap_job_template_id
+    wait_for_completion = false
   }
 }
 
@@ -159,7 +152,7 @@ resource "terraform_data" "trigger_aap_action" {
   lifecycle {
     action_trigger {
       events  = [after_create]
-      actions = [action.aap_eda_eventstream_post.infrastructure_ready]
+      actions = [action.aap_job_launch.configure_infrastructure]
     }
   }
 }

@@ -61,6 +61,11 @@ variable "aap_token" {
   sensitive   = true
 }
 
+variable "aap_job_template_id" {
+  description = "AAP job template ID for Configure AWS Infrastructure"
+  type        = number
+}
+
 variable "eda_event_stream_name" {
   description = "Name of the EDA event stream to post events to"
   type        = string
