@@ -222,6 +222,18 @@ variable "terraform_run_id" {
   default     = "local-run"
 }
 
+variable "terraform_workspace" {
+  description = "Terraform Cloud workspace name (auto-populated by HCP Terraform)"
+  type        = string
+  default     = "default"
+}
+
+variable "terraform_organization" {
+  description = "Terraform Cloud organization name (auto-populated by HCP Terraform)"
+  type        = string
+  default     = "default"
+}
+
 # ============================================================================
 # Tags
 # ============================================================================

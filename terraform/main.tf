@@ -132,6 +132,21 @@ action "aap_job_launch" "configure_infrastructure" {
   config {
     job_template_id     = var.aap_job_template_id
     wait_for_completion = false
+    extra_vars = jsonencode({
+      terraform_workspace    = var.terraform_workspace
+      terraform_organization = var.terraform_organization
+      terraform_run_id       = var.terraform_run_id
+      vpc_id                 = module.vpc.vpc_id
+      vpc_cidr               = module.vpc.vpc_cidr
+      aws_region             = var.aws_region
+      environment            = var.environment
+      instances              = module.compute.instance_details
+      vault_address          = var.hcp_vault_address
+      vault_namespace        = var.hcp_vault_namespace
+      openshift_namespace    = var.openshift_namespace
+      application_name       = var.application_name
+      replicas               = var.openshift_replicas
+    })
   }
 }
 
