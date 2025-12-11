@@ -6,6 +6,7 @@
   hosts: localhost
   connection: local
   gather_facts: no
+  become: no
   
   tasks:
     - name: Display Terraform context
@@ -282,6 +283,7 @@
   hosts: localhost
   connection: local
   gather_facts: no
+  become: no
   
   tasks:
     - name: Display deployment trigger information
