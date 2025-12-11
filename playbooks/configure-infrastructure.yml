@@ -29,7 +29,8 @@
       debug:
         msg:
           - "VAULT_ADDR: {{ lookup('env', 'VAULT_ADDR') }}"
-          - "VAULT_NAMESPACE: {{ lookup('env', 'VAULT_NAMESPACE') }}"
+          - "VAULT_NAMESPACE (env): {{ lookup('env', 'VAULT_NAMESPACE') }}"
+          - "VAULT_NAMESPACE (var): {{ vault_namespace }}"
           - "VAULT_ROLE_ID: {{ lookup('env', 'VAULT_ROLE_ID')[:8] }}..."
           - "VAULT_SECRET_ID: {{ 'SET' if lookup('env', 'VAULT_SECRET_ID') else 'NOT SET' }}"
 
@@ -39,7 +40,7 @@
         method: POST
         body_format: json
         headers:
-          X-Vault-Namespace: "{{ lookup('env', 'VAULT_NAMESPACE') }}"
+          X-Vault-Namespace: "{{ vault_namespace }}"
         body:
           role_id: "{{ lookup('env', 'VAULT_ROLE_ID') }}"
           secret_id: "{{ lookup('env', 'VAULT_SECRET_ID') }}"
@@ -58,7 +59,7 @@
         method: GET
         headers:
           X-Vault-Token: "{{ vault_token }}"
-          X-Vault-Namespace: "{{ lookup('env', 'VAULT_NAMESPACE') }}"
+          X-Vault-Namespace: "{{ vault_namespace }}"
         status_code: 200
       register: app_secrets
       no_log: true
@@ -105,7 +106,7 @@
   vars:
     vault_token: "{{ hostvars['localhost']['vault_token'] }}"
     vault_address: "{{ lookup('env', 'VAULT_ADDR') | regex_replace('/$', '') }}"
-    vault_namespace: "{{ lookup('env', 'VAULT_NAMESPACE') }}"
+    vault_namespace: "{{ vault_namespace }}"
     database_url: "{{ hostvars['localhost']['database_url'] }}"
     api_key: "{{ hostvars['localhost']['api_key'] }}"
   
