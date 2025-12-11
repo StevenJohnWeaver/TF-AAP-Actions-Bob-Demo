@@ -22,42 +22,6 @@
         run_job_template:
           name: "{{ event.payload.job_template_name }}"
           organization: "{{ event.payload.organization_name }}"
-          controller_host: "{{ ansible_env.CONTROLLER_HOST | default('https://sandbox-aap-steveweaver-hashi-dev.apps.rm2.thpm.p1.openshiftapps.com') }}"
-          controller_oauthtoken: "{{ ansible_env.CONTROLLER_OAUTH_TOKEN }}"
-          validate_certs: true
-          wait: false
-          
-          extra_vars:
-            # Terraform context
-            terraform_workspace: "{{ event.terraform.workspace }}"
-            terraform_organization: "{{ event.terraform.organization }}"
-            terraform_run_id: "{{ event.terraform.run_id }}"
-            
-            # VPC details
-            vpc_id: "{{ event.infrastructure.vpc.id }}"
-            vpc_cidr: "{{ event.infrastructure.vpc.cidr }}"
-            
-            # Instance details
-            instances: "{{ event.infrastructure.instances }}"
-            
-            # Security groups
-            security_groups: "{{ event.infrastructure.security_groups }}"
-            
-            # AWS metadata
-            aws_region: "{{ event.infrastructure.region }}"
-            environment: "{{ event.infrastructure.environment }}"
-            
-            # Ansible inventory structure
-            ansible_inventory_data: "{{ event.ansible_inventory }}"
-            
-            # OpenShift deployment configuration
-            openshift_namespace: "{{ event.deployment.openshift_namespace }}"
-            application_name: "{{ event.deployment.application_name }}"
-            replicas: "{{ event.deployment.replicas }}"
-            
-            # HCP Vault configuration
-            vault_address: "{{ event.vault.address }}"
-            vault_namespace: "{{ event.vault.namespace }}"
     
     # Secondary rule: Log all Terraform events for debugging
     - name: Log Terraform Events
