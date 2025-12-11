@@ -296,20 +296,23 @@
           - "Backend Instances: {{ instances | length }}"
     
     - name: Launch OpenShift deployment job
-      awx.awx.job_launch:
-        job_template: "Deploy to OpenShift"
-        extra_vars:
-          terraform_run_id: "{{ terraform_run_id }}"
-          terraform_workspace: "{{ terraform_workspace }}"
-          vpc_id: "{{ vpc_id }}"
-          aws_region: "{{ aws_region }}"
-          instances: "{{ instances }}"
-          openshift_namespace: "{{ openshift_namespace }}"
-          application_name: "{{ application_name }}"
-          replicas: "{{ replicas }}"
-          vault_address: "{{ vault_address }}"
-          vault_namespace: "{{ vault_namespace }}"
-      register: openshift_job
+      ansible.builtin.debug:
+        msg: "Would launch OpenShift deployment job with terraform_run_id={{ terraform_run_id }}"
+      # TODO: Replace with proper job template launch once awx.awx collection is available
+      # awx.awx.job_launch:
+      #   job_template: "Deploy to OpenShift"
+      #   extra_vars:
+      #     terraform_run_id: "{{ terraform_run_id }}"
+      #     terraform_workspace: "{{ terraform_workspace }}"
+      #     vpc_id: "{{ vpc_id }}"
+      #     aws_region: "{{ aws_region }}"
+      #     instances: "{{ instances }}"
+      #     openshift_namespace: "{{ openshift_namespace }}"
+      #     application_name: "{{ application_name }}"
+      #     replicas: "{{ replicas }}"
+      #     vault_address: "{{ vault_address }}"
+      #     vault_namespace: "{{ vault_namespace }}"
+      # register: openshift_job
       when: openshift_namespace is defined
     
     - name: Display OpenShift job information
