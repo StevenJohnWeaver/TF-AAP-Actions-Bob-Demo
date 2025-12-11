@@ -6,10 +6,18 @@
 - name: Terraform Infrastructure Event Handler
   hosts: all
   
+#  sources:
+#    - name: Listen to Terraform event stream
+#      ansible.eda.generic:
+#        event_stream_name: terraform-infrastructure-events
+
   sources:
-    - name: Listen to Terraform event stream
-      ansible.eda.generic:
-        event_stream_name: terraform-infrastructure-events
+    - ansible.eda.webhook:
+        host: 0.0.0.0
+        port: 5000
+      filters:
+        - ansible.eda.insert_hosts_to_meta:
+            host_path: payload.limit
         
   rules:
     # Main rule: Handle Terraform Actions job template trigger
