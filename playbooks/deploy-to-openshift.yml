@@ -83,17 +83,19 @@
         msg: "OpenShift API connectivity: {{ 'SUCCESS ✅' if api_check.status == 200 else 'FAILED ❌' }}"
     
     - name: Verify namespace exists (OpenShift Sandbox uses pre-created namespace)
-      kubernetes.core.k8s_info:
-        api_key: "{{ openshift_token }}"
-        host: "{{ openshift_api_url }}"
+      uri:
+        url: "{{ openshift_api_url }}/api/v1/namespaces/{{ openshift_namespace }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ openshift_token }}"
         validate_certs: no
-        kind: Namespace
-        name: "{{ openshift_namespace }}"
+        status_code: 200
       register: namespace_check
+      ignore_errors: yes
     
     - name: Display namespace status
       debug:
-        msg: "Using namespace: {{ openshift_namespace }} ({{ 'exists ✅' if namespace_check.resources | length > 0 else 'not found ❌' }})"
+        msg: "Using namespace: {{ openshift_namespace }} ({{ 'exists ✅' if namespace_check.status == 200 else 'not found ❌' }})"
     
     - name: Fetch application secrets from HCP Vault
       uri:
