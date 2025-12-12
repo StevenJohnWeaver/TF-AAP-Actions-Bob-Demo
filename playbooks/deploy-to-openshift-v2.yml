@@ -1,0 +1,36 @@
+---
+# Deploy application to OpenShift - Version 2 (No kubernetes.core.k8s_auth)
+
+- name: Deploy Application to OpenShift
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  become: no
+  
+  vars:
+    openshift_namespace: "steveweaver-hashi"
+    
+  tasks:
+    - name: Display deployment context
+      debug:
+        msg:
+          - "OpenShift Application Deployment"
+          - "Namespace: {{ openshift_namespace }}"
+    
+    - name: Authenticate to HCP Vault
+      uri:
+        url: "{{ vault_address | regex_replace('/$', '') }}/v1/auth/approle/login"
+        method: POST
+        body_format: json
+        headers:
+          X-Vault-Namespace: "{{ vault_namespace }}"
+        body:
+          role_id: "{{ lookup('env', 'VAULT_ROLE_ID') }}"
+          secret_id: "{{ lookup('env', 'VAULT_SECRET_ID') }}"
+        status_code: 200
+      register: vault_login
+      no_log: true
+    
+    - name: Display success
+      debug:
+        msg: "✅ OpenShift Deployment Ready - Vault authenticated successfully!"
