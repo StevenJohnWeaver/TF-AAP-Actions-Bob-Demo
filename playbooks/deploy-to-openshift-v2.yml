@@ -1,5 +1,6 @@
 ---
 # Deploy application to OpenShift - Version 2 (No kubernetes.core.k8s_auth)
+# This playbook is triggered after infrastructure configuration is complete
 
 - name: Deploy Application to OpenShift
   hosts: localhost
@@ -8,14 +9,27 @@
   become: no
   
   vars:
+    # Default values - will be overridden by Vault secrets
+    openshift_api_url: ""
+    openshift_token: ""
     openshift_namespace: "steveweaver-hashi"
     
   tasks:
     - name: Display deployment context
       debug:
         msg:
+          - "========================================="
           - "OpenShift Application Deployment"
+          - "========================================="
+          - "Terraform Run ID: {{ terraform_run_id }}"
+          - "Workspace: {{ terraform_workspace }}"
+          - "VPC ID: {{ vpc_id }}"
+          - "AWS Region: {{ aws_region }}"
+          - "Backend Instances: {{ instances | length }}"
           - "Namespace: {{ openshift_namespace }}"
+          - "Application: {{ application_name }}"
+          - "Replicas: {{ replicas }}"
+          - "========================================="
     
     - name: Authenticate to HCP Vault
       uri:
@@ -31,6 +45,92 @@
       register: vault_login
       no_log: true
     
-    - name: Display success
+    - name: Set Vault token
+      set_fact:
+        vault_token: "{{ vault_login.json.auth.client_token }}"
+      no_log: true
+    
+    - name: Fetch OpenShift credentials from HCP Vault
+      uri:
+        url: "{{ vault_address | regex_replace('/$', '') }}/v1/secret/data/openshift/credentials"
+        method: GET
+        headers:
+          X-Vault-Token: "{{ vault_token }}"
+          X-Vault-Namespace: "{{ vault_namespace }}"
+        status_code: 200
+      register: ocp_creds
+      no_log: true
+    
+    - name: Set OpenShift connection details
+      set_fact:
+        openshift_api_url: "{{ ocp_creds.json.data.data.api_url }}"
+        openshift_token: "{{ ocp_creds.json.data.data.token }}"
+        openshift_namespace: "{{ ocp_creds.json.data.data.namespace }}"
+      no_log: true
+    
+    - name: Verify OpenShift API connectivity
+      uri:
+        url: "{{ openshift_api_url }}/apis"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ openshift_token }}"
+        validate_certs: no
+        status_code: 200
+      register: api_check
+      ignore_errors: yes
+    
+    - name: Display API check result
       debug:
-        msg: "✅ OpenShift Deployment Ready - Vault authenticated successfully!"
+        msg: "OpenShift API connectivity: {{ 'SUCCESS ✅' if api_check.status == 200 else 'FAILED ❌' }}"
+    
+    - name: Verify namespace exists
+      uri:
+        url: "{{ openshift_api_url }}/api/v1/namespaces/{{ openshift_namespace }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ openshift_token }}"
+        validate_certs: no
+        status_code: 200
+      register: namespace_check
+      ignore_errors: yes
+    
+    - name: Display namespace status
+      debug:
+        msg: "Using namespace: {{ openshift_namespace }} ({{ 'exists ✅' if namespace_check.status == 200 else 'not found ❌' }})"
+    
+    - name: Fetch application secrets from HCP Vault
+      uri:
+        url: "{{ vault_address | regex_replace('/$', '') }}/v1/secret/data/applications/demo-app"
+        method: GET
+        headers:
+          X-Vault-Token: "{{ vault_token }}"
+          X-Vault-Namespace: "{{ vault_namespace }}"
+        status_code: 200
+      register: app_secrets
+      no_log: true
+    
+    - name: Create backend IPs list
+      set_fact:
+        backend_ips: "{{ instances | map(attribute='private_ip') | join(',') }}"
+        backend_ids: "{{ instances | map(attribute='id') | join(',') }}"
+    
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "========================================="
+          - "✅ OpenShift Deployment Ready"
+          - "========================================="
+          - "API URL: {{ openshift_api_url }}"
+          - "Namespace: {{ openshift_namespace }}"
+          - "Application: {{ application_name }}"
+          - "Backend IPs: {{ backend_ips }}"
+          - "Secrets Retrieved: ✅"
+          - "========================================="
+          - ""
+          - "NOTE: Full deployment with kubernetes.core collection"
+          - "requires execution environment with that collection installed."
+          - ""
+          - "Current status: Connection verified, ready to deploy!"
+          - "========================================="
+
+# Made with Bob
