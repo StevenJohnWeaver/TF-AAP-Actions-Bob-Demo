@@ -31,6 +31,15 @@
           - "Replicas: {{ replicas }}"
           - "========================================="
     
+    - name: Debug Vault environment variables
+      debug:
+        msg:
+          - "VAULT_ADDR: {{ lookup('env', 'VAULT_ADDR') }}"
+          - "VAULT_NAMESPACE (env): {{ lookup('env', 'VAULT_NAMESPACE') }}"
+          - "VAULT_NAMESPACE (var): {{ vault_namespace }}"
+          - "VAULT_ROLE_ID: {{ lookup('env', 'VAULT_ROLE_ID')[:8] if lookup('env', 'VAULT_ROLE_ID') else 'NOT SET' }}..."
+          - "VAULT_SECRET_ID: {{ 'SET' if lookup('env', 'VAULT_SECRET_ID') else 'NOT SET' }}"
+    
     - name: Authenticate to HCP Vault
       uri:
         url: "{{ vault_address | regex_replace('/$', '') }}/v1/auth/approle/login"
