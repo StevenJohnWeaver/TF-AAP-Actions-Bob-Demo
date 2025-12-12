@@ -150,7 +150,30 @@ action "aap_job_launch" "configure_infrastructure" {
   }
 }
 
-# Trigger the action after compute resources are created
+# Define action to launch OpenShift deployment after infrastructure is created
+action "aap_job_launch" "deploy_to_openshift" {
+  config {
+    job_template_id     = var.aap_openshift_job_template_id
+    wait_for_completion = false
+    extra_vars = jsonencode({
+      terraform_workspace    = var.terraform_workspace
+      terraform_organization = var.terraform_organization
+      terraform_run_id       = var.terraform_run_id
+      vpc_id                 = module.vpc.vpc_id
+      vpc_cidr               = module.vpc.vpc_cidr
+      aws_region             = var.aws_region
+      environment            = var.environment
+      instances              = module.compute.instance_details
+      vault_address          = var.hcp_vault_address
+      vault_namespace        = var.hcp_vault_namespace
+      openshift_namespace    = var.openshift_namespace
+      application_name       = var.application_name
+      replicas               = var.openshift_replicas
+    })
+  }
+}
+
+# Trigger both actions after compute resources are created
 resource "terraform_data" "trigger_aap_action" {
   depends_on = [
     module.vpc,
@@ -167,7 +190,10 @@ resource "terraform_data" "trigger_aap_action" {
   lifecycle {
     action_trigger {
       events  = [after_create]
-      actions = [action.aap_job_launch.configure_infrastructure]
+      actions = [
+        action.aap_job_launch.configure_infrastructure,
+        action.aap_job_launch.deploy_to_openshift
+      ]
     }
   }
 }
@@ -204,6 +230,19 @@ output "eda_event_posted" {
     status       = "Action configured to post to AAP EDA"
   }
   description = "EDA event posting confirmation"
+  depends_on  = [terraform_data.trigger_aap_action]
+}
+
+output "openshift_deployment_triggered" {
+  value = {
+    job_template_id = var.aap_openshift_job_template_id
+    timestamp       = timestamp()
+    status          = "OpenShift deployment action triggered"
+    namespace       = var.openshift_namespace
+    application     = var.application_name
+    replicas        = var.openshift_replicas
+  }
+  description = "OpenShift deployment trigger confirmation"
   depends_on  = [terraform_data.trigger_aap_action]
 }
 

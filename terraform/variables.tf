@@ -66,6 +66,11 @@ variable "aap_job_template_id" {
   type        = number
 }
 
+variable "aap_openshift_job_template_id" {
+  description = "AAP job template ID for Deploy to OpenShift"
+  type        = number
+}
+
 variable "eda_event_stream_name" {
   description = "Name of the EDA event stream to post events to"
   type        = string
