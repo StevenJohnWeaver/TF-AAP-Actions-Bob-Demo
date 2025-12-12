@@ -79,6 +79,7 @@
         ansible_host: "{{ item.public_ip }}"
         instance_id: "{{ item.id }}"
         private_ip: "{{ item.private_ip }}"
+        public_ip: "{{ item.public_ip }}"
         subnet_id: "{{ item.subnet_id }}"
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
       loop: "{{ instances }}"
@@ -114,7 +115,7 @@
         msg:
           - "Configuring: {{ inventory_hostname }}"
           - "Instance ID: {{ instance_id }}"
-          - "Private IP: {{ ansible_host }}"
+          - "Private IP: {{ private_ip }}"
           - "Public IP: {{ public_ip }}"
     
     - name: Update system packages
