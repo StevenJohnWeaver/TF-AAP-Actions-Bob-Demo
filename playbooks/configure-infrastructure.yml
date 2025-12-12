@@ -321,75 +321,50 @@
     
     - name: Test application endpoint
       uri:
-        url: "http://localhost:8080/health"
+        url: "http://localhost:8080/"
         method: GET
         status_code: 200
       register: health_check
       retries: 5
       delay: 10
       until: health_check.status == 200
+      ignore_errors: yes
+    
+    - name: Display health check result
+      debug:
+        msg: "Application health check: {{ 'PASSED ✅' if health_check.status == 200 else 'FAILED ❌' }}"
+    
+    - name: Display application URLs
+      debug:
+        msg:
+          - "========================================="
+          - "✅ Infrastructure Configuration Complete!"
+          - "========================================="
+          - "Application URLs:"
+          - "{% for instance in instances %}"
+          - "  - http://{{ instance.public_ip }}:8080"
+          - "{% endfor %}"
+          - ""
+          - "Instance Details:"
+          - "{% for instance in instances %}"
+          - "  {{ instance.name }}:"
+          - "    Public IP: {{ instance.public_ip }}"
+          - "    Private IP: {{ instance.private_ip }}"
+          - "    Instance ID: {{ instance.id }}"
+          - "{% endfor %}"
+          - "========================================="
   
   handlers:
     - name: Reload systemd
       systemd:
         daemon_reload: yes
 
-- name: Trigger OpenShift Deployment
-  hosts: localhost
-  connection: local
-  gather_facts: no
-  become: no
-  
-  tasks:
-    - name: Display deployment trigger information
-      debug:
-        msg:
-          - "========================================="
-          - "Triggering OpenShift Deployment"
-          - "========================================="
-          - "Namespace: {{ openshift_namespace }}"
-          - "Application: {{ application_name }}"
-          - "Replicas: {{ replicas }}"
-          - "Backend Instances: {{ instances | length }}"
-    
-    - name: Launch OpenShift deployment job
-      ansible.builtin.debug:
-        msg: "Would launch OpenShift deployment job with terraform_run_id={{ terraform_run_id }}"
-      # TODO: Replace with proper job template launch once awx.awx collection is available
-      # awx.awx.job_launch:
-      #   job_template: "Deploy to OpenShift"
-      #   extra_vars:
-      #     terraform_run_id: "{{ terraform_run_id }}"
-      #     terraform_workspace: "{{ terraform_workspace }}"
-      #     vpc_id: "{{ vpc_id }}"
-      #     aws_region: "{{ aws_region }}"
-      #     instances: "{{ instances }}"
-      #     openshift_namespace: "{{ openshift_namespace }}"
-      #     application_name: "{{ application_name }}"
-      #     replicas: "{{ replicas }}"
-      #     vault_address: "{{ vault_address }}"
-      #     vault_namespace: "{{ vault_namespace }}"
-      # register: openshift_job
-      when: openshift_namespace is defined
-    
-    - name: Display OpenShift job information
-      debug:
-        msg:
-          - "OpenShift deployment job launched successfully"
-          - "Job ID: {{ openshift_job.id }}"
-          - "Job URL: {{ openshift_job.url }}"
-      when: openshift_job is defined and openshift_job.id is defined
-    
-    - name: Summary of configuration
-      debug:
-        msg:
-          - "========================================="
-          - "Configuration Complete!"
-          - "========================================="
-          - "Terraform Run ID: {{ terraform_run_id }}"
-          - "VPC ID: {{ vpc_id }}"
-          - "Configured Instances: {{ instances | length }}"
-          - "OpenShift Deployment: {{ 'Triggered' if openshift_job is defined else 'Skipped' }}"
-          - "========================================="
+- name: Deploy to OpenShift
+  import_playbook: deploy-to-openshift.yml
+  vars:
+    openshift_namespace: "steveweaver-hashi"
+    application_name: "terraform-demo"
+    replicas: 1
+    environment: "demo"
 
 # Made with Bob
