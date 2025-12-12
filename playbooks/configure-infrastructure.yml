@@ -359,12 +359,8 @@
       systemd:
         daemon_reload: yes
 
-- name: Deploy to OpenShift
-  import_playbook: deploy-to-openshift.yml
-  vars:
-    openshift_namespace: "steveweaver-hashi"
-    application_name: "terraform-demo"
-    replicas: 1
-    environment: "demo"
+# OpenShift deployment moved to separate job template
+# See docs/05-openshift-deployment-setup.md for instructions
+# To deploy to OpenShift, create a separate job template using playbooks/deploy-to-openshift.yml
 
 # Made with Bob
